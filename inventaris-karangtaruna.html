@@ -1,0 +1,1992 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inventaris Karangtaruna</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --hijau-tua: #1a4d2e;
+    --hijau-tengah: #2d7a4f;
+    --hijau-muda: #4caf7d;
+    --kuning-emas: #f5a623;
+    --kuning-terang: #ffc84a;
+    --krem: #fdf8ef;
+    --putih: #ffffff;
+    --abu-gelap: #1e1e1e;
+    --abu-tengah: #555;
+    --abu-muda: #e8e8e8;
+    --merah: #d93025;
+    --biru: #1a73e8;
+    --card-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    --card-shadow-hover: 0 6px 24px rgba(0,0,0,0.14);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background: var(--krem);
+    color: var(--abu-gelap);
+    min-height: 100vh;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--hijau-tua);
+    padding: 0 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.25);
+  }
+  .header-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .header-logo {
+    width: 38px; height: 38px;
+    background: var(--kuning-emas);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .header-title {
+    color: var(--putih);
+    font-size: 1rem;
+    font-weight: 700;
+    line-height: 1.2;
+  }
+  .header-subtitle {
+    color: rgba(255,255,255,0.55);
+    font-size: 0.72rem;
+    font-weight: 400;
+  }
+  .header-badge {
+    background: var(--kuning-emas);
+    color: var(--hijau-tua);
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+  }
+  .sync-badge {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+  }
+  .sync-badge.sync-local   { background: rgba(255,255,255,0.15); color: rgba(255,255,255,0.75); }
+  .sync-badge.sync-syncing { background: rgba(255,255,255,0.15); color: var(--kuning-terang); }
+  .sync-badge.sync-online  { background: rgba(76,175,125,0.2); color: var(--hijau-muda); }
+  .sync-badge.sync-offline { background: rgba(217,48,37,0.2); color: #ff8a80; }
+  .btn-refresh {
+    background: rgba(255,255,255,0.12);
+    border: none;
+    color: var(--putih);
+    width: 30px; height: 30px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .btn-refresh:hover { background: rgba(255,255,255,0.25); }
+
+  /* ── MAIN LAYOUT ── */
+  main { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: inline-flex;
+    gap: 0.35rem;
+    background: var(--putih);
+    padding: 6px;
+    border-radius: 12px;
+    box-shadow: var(--card-shadow);
+    margin-bottom: 1.5rem;
+  }
+  .tab-btn {
+    padding: 0.6rem 1.3rem;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--abu-tengah);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--hijau-tua); }
+  .tab-btn.active { background: var(--hijau-tua); color: var(--putih); }
+  .tab-btn .count {
+    display: inline-block;
+    margin-left: 6px;
+    background: rgba(255,255,255,0.25);
+    padding: 1px 7px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+  }
+  .tab-btn:not(.active) .count { background: var(--abu-muda); color: var(--abu-tengah); }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── STATS BAR ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  .stats-row.stats-3 { grid-template-columns: repeat(3, 1fr); }
+  .stat-card {
+    background: var(--putih);
+    border-radius: 14px;
+    padding: 1.1rem 1.3rem;
+    box-shadow: var(--card-shadow);
+    border-left: 4px solid var(--hijau-muda);
+  }
+  .stat-card.gold { border-left-color: var(--kuning-emas); }
+  .stat-card.red  { border-left-color: var(--merah); }
+  .stat-card.blue { border-left-color: var(--biru); }
+  .stat-label { font-size: 0.72rem; color: var(--abu-tengah); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .stat-value { font-size: 1.6rem; font-weight: 800; color: var(--abu-gelap); margin-top: 2px; }
+  .stat-value.mono { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; }
+
+  /* ── TOOLBAR ── */
+  .toolbar {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .search-box {
+    flex: 1;
+    min-width: 200px;
+    position: relative;
+  }
+  .search-box input {
+    width: 100%;
+    padding: 0.6rem 1rem 0.6rem 2.5rem;
+    border: 1.5px solid var(--abu-muda);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    background: var(--putih);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box input:focus { border-color: var(--hijau-muda); }
+  .search-icon {
+    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+    color: var(--abu-tengah); font-size: 1rem; pointer-events: none;
+  }
+  .filter-select {
+    padding: 0.6rem 1rem;
+    border: 1.5px solid var(--abu-muda);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    background: var(--putih);
+    outline: none;
+    cursor: pointer;
+    min-width: 150px;
+  }
+  .btn-tambah {
+    background: var(--hijau-tua);
+    color: var(--putih);
+    border: none;
+    padding: 0.6rem 1.2rem;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn-tambah:hover { background: var(--hijau-tengah); }
+  .btn-tambah:active { transform: scale(0.97); }
+
+  .btn-export {
+    background: var(--putih);
+    color: var(--hijau-tua);
+    border: 1.5px solid var(--hijau-tua);
+    padding: 0.58rem 1.1rem;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: background 0.2s, transform 0.1s;
+    white-space: nowrap;
+  }
+  .btn-export:hover { background: #eef7f0; }
+  .btn-export:active { transform: scale(0.97); }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--putih);
+    border-radius: 16px;
+    box-shadow: var(--card-shadow);
+    overflow: hidden;
+    overflow-x: auto;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead tr { background: var(--hijau-tua); }
+  thead th {
+    padding: 0.85rem 1rem;
+    text-align: left;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: rgba(255,255,255,0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+  }
+  tbody tr {
+    border-bottom: 1px solid #f0f0f0;
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: #f7fbf8; }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td {
+    padding: 0.85rem 1rem;
+    font-size: 0.88rem;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  .td-kode {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--hijau-tengah);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .td-nama { font-weight: 600; white-space: normal; }
+  .td-nilai {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.82rem;
+    color: var(--hijau-tua);
+    font-weight: 600;
+  }
+  .badge-kondisi {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .badge-kondisi.baik     { background: #e8f5e9; color: #2e7d32; }
+  .badge-kondisi.rusak    { background: #fce4ec; color: #c62828; }
+  .badge-kondisi.perbaikan{ background: #fff3e0; color: #e65100; }
+  .badge-kondisi.tidak-ada{ background: #f3e5f5; color: #6a1b9a; }
+
+  .badge-kategori {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    background: var(--krem);
+    color: var(--hijau-tua);
+    border: 1px solid #dce9dc;
+  }
+
+  .badge-status {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .badge-status.dipinjam  { background: #e8f0fe; color: #1a73e8; }
+  .badge-status.terlambat { background: #fce4ec; color: #c62828; }
+  .badge-status.selesai   { background: #e8f5e9; color: #2e7d32; }
+
+  .badge-tersedia { font-weight: 700; }
+  .badge-tersedia.habis { color: var(--merah); }
+  .badge-tersedia.ok { color: var(--hijau-tengah); }
+
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; }
+  .btn-edit, .btn-hapus, .btn-pinjam, .btn-kembali, .btn-unit, .btn-detail {
+    border: none;
+    border-radius: 7px;
+    padding: 5px 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: inherit;
+    transition: opacity 0.15s;
+    white-space: nowrap;
+  }
+  .btn-edit { background: #e8f0fe; color: var(--biru); }
+  .btn-hapus { background: #fce8e6; color: var(--merah); }
+  .btn-pinjam { background: #fff3e0; color: #e65100; }
+  .btn-kembali { background: #e8f5e9; color: #2e7d32; }
+  .btn-unit { background: #f3e5f5; color: #6a1b9a; }
+  .btn-detail { background: #eef7f0; color: var(--hijau-tua); }
+  .btn-edit:hover, .btn-hapus:hover, .btn-pinjam:hover, .btn-kembali:hover, .btn-unit:hover, .btn-detail:hover { opacity: 0.75; }
+  .btn-pinjam:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── DETAIL ASET ── */
+  .detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.9rem 1.2rem;
+    margin-bottom: 1.1rem;
+  }
+  .detail-item { }
+  .detail-item.full { grid-column: 1 / -1; }
+  .detail-label {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: var(--abu-tengah);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    margin-bottom: 3px;
+  }
+  .detail-value { font-size: 0.95rem; font-weight: 600; color: var(--abu-gelap); }
+  .detail-value.mono { font-family: 'JetBrains Mono', monospace; }
+  .detail-value.harga { color: var(--hijau-tua); }
+  .detail-value.harga-total { color: var(--kuning-emas); background: #fff8e8; display: inline-block; padding: 2px 8px; border-radius: 6px; }
+  .detail-divider { border: none; border-top: 1px solid #eee; margin: 1rem 0; }
+  .detail-subtitle { font-size: 0.85rem; font-weight: 700; color: var(--hijau-tua); margin-bottom: 0.6rem; }
+  .detail-unit-summary {
+    display: flex;
+    gap: 0.6rem;
+    margin-bottom: 0.8rem;
+    flex-wrap: wrap;
+  }
+  .detail-unit-chip {
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .detail-unit-chip.tersedia { background: #e8f5e9; color: #2e7d32; }
+  .detail-unit-chip.dipinjam { background: #e8f0fe; color: #1a73e8; }
+  .detail-unit-list { max-height: 160px; overflow-y: auto; border: 1.5px solid var(--abu-muda); border-radius: 9px; padding: 0.4rem 0.7rem; background: #fafafa; }
+  .detail-unit-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 2px;
+    font-size: 0.83rem;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .detail-unit-row:last-child { border-bottom: none; }
+  .detail-unit-row .lbl { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+
+  /* ── UNIT LIST (modal kelola unit) ── */
+  .unit-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 2px;
+    border-bottom: 1px solid #f0f0f0;
+    flex-wrap: wrap;
+  }
+  .unit-row:last-child { border-bottom: none; }
+  .unit-label-input {
+    flex: 1;
+    min-width: 110px;
+    padding: 0.45rem 0.6rem;
+    border: 1.5px solid var(--abu-muda);
+    border-radius: 8px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.83rem;
+    outline: none;
+    background: #fafafa;
+  }
+  .unit-label-input:focus { border-color: var(--hijau-muda); background: var(--putih); }
+  .unit-kondisi-select {
+    padding: 0.4rem 0.5rem;
+    border: 1.5px solid var(--abu-muda);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.78rem;
+    background: #fafafa;
+    outline: none;
+  }
+  .unit-peminjam-note { font-size: 0.75rem; color: #888; min-width: 90px; }
+
+  /* ── CHECKLIST UNIT (modal peminjaman) ── */
+  .unit-check-wrap {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1.5px solid var(--abu-muda);
+    border-radius: 9px;
+    padding: 0.5rem 0.7rem;
+    background: #fafafa;
+  }
+  .unit-check-label {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 6px 2px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+  }
+  .unit-check-label:last-child { border-bottom: none; }
+  .unit-check-label span { font-family: 'JetBrains Mono', monospace; }
+  .unit-check-empty { color: #888; font-size: 0.85rem; text-align: center; padding: 0.6rem; }
+  .unit-quick-btns { display: flex; gap: 8px; margin-bottom: 8px; }
+  .btn-quick {
+    background: var(--putih);
+    color: var(--hijau-tua);
+    border: 1.5px solid var(--abu-muda);
+    padding: 0.35rem 0.75rem;
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 0.76rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-quick:hover { background: #eef7f0; border-color: var(--hijau-muda); }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: var(--abu-tengah);
+  }
+  .empty-state .icon { font-size: 3rem; margin-bottom: 0.5rem; }
+  .empty-state p { font-size: 0.9rem; }
+
+  /* ── MODAL ── */
+  .overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  .overlay.active { display: flex; }
+  .modal {
+    background: var(--putih);
+    border-radius: 18px;
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    animation: modalIn 0.2s ease;
+  }
+  @keyframes modalIn { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .modal-header {
+    background: var(--hijau-tua);
+    color: var(--putih);
+    padding: 1.2rem 1.5rem;
+    border-radius: 18px 18px 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-title { font-size: 1rem; font-weight: 700; }
+  .modal-close {
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: var(--putih);
+    width: 28px; height: 28px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+  }
+  .modal-close:hover { background: rgba(255,255,255,0.3); }
+  .modal-body { padding: 1.5rem; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .form-group { margin-bottom: 1rem; }
+  .form-group label {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: var(--abu-tengah);
+    margin-bottom: 5px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    width: 100%;
+    padding: 0.6rem 0.85rem;
+    border: 1.5px solid var(--abu-muda);
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+    background: #fafafa;
+  }
+  .form-group textarea { resize: vertical; min-height: 72px; }
+  .form-group input:focus,
+  .form-group select:focus,
+  .form-group textarea:focus { border-color: var(--hijau-muda); background: var(--putih); }
+  .form-hint { font-size: 0.74rem; color: var(--abu-tengah); margin-top: 4px; }
+
+  .modal-footer {
+    padding: 0 1.5rem 1.5rem;
+    display: flex;
+    gap: 0.75rem;
+    justify-content: flex-end;
+  }
+  .btn-batal {
+    background: var(--abu-muda);
+    color: var(--abu-tengah);
+    border: none;
+    padding: 0.65rem 1.3rem;
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .btn-batal:hover { background: #d0d0d0; }
+  .btn-simpan {
+    background: var(--hijau-tua);
+    color: var(--putih);
+    border: none;
+    padding: 0.65rem 1.5rem;
+    border-radius: 9px;
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-simpan:hover { background: var(--hijau-tengah); }
+
+  /* ── TOAST ── */
+  .toast {
+    position: fixed;
+    bottom: 1.5rem; right: 1.5rem;
+    background: var(--hijau-tua);
+    color: var(--putih);
+    padding: 0.8rem 1.2rem;
+    border-radius: 10px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+    z-index: 999;
+    display: flex; align-items: center; gap: 8px;
+    transform: translateY(80px);
+    opacity: 0;
+    transition: all 0.3s ease;
+  }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast.error { background: var(--merah); }
+
+  /* ── CONFIRM MODAL ── */
+  .confirm-overlay {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 300;
+    align-items: center; justify-content: center;
+  }
+  .confirm-overlay.active { display: flex; }
+  .confirm-box {
+    background: var(--putih);
+    border-radius: 14px;
+    padding: 1.8rem;
+    max-width: 380px;
+    width: 90%;
+    text-align: center;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+  }
+  .confirm-icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+  .confirm-title { font-size: 1.05rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .confirm-msg { color: var(--abu-tengah); font-size: 0.88rem; margin-bottom: 1.4rem; }
+  .confirm-btns { display: flex; gap: 0.75rem; justify-content: center; }
+  .btn-no {
+    background: var(--abu-muda); color: var(--abu-tengah);
+    border: none; padding: 0.6rem 1.4rem; border-radius: 9px;
+    font-family: inherit; font-size: 0.88rem; font-weight: 600; cursor: pointer;
+  }
+  .btn-yes {
+    background: var(--merah); color: var(--putih);
+    border: none; padding: 0.6rem 1.4rem; border-radius: 9px;
+    font-family: inherit; font-size: 0.88rem; font-weight: 700; cursor: pointer;
+  }
+
+  /* responsive */
+  @media (max-width: 700px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .form-row { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 480px) {
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    main { padding: 1rem; }
+    .tabs { width: 100%; }
+    .tab-btn { flex: 1; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-brand">
+    <div class="header-logo">🏡</div>
+    <div>
+      <div class="header-title">SIMBARANG</div>
+      <div class="header-subtitle">Sistem Inventaris Karangtaruna</div>
+    </div>
+  </div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="sync-badge sync-local" id="syncBadge">💾 Mode Lokal</span>
+    <button class="btn-refresh" onclick="muatUlangCloud()" title="Muat ulang data terbaru dari cloud">🔄</button>
+    <div class="header-badge">📋 ASET &amp; INVENTARIS</div>
+  </div>
+</header>
+
+<main>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabBtnInventaris" onclick="switchTab('inventaris')">📦 Inventaris</button>
+    <button class="tab-btn" id="tabBtnPeminjaman" onclick="switchTab('peminjaman')">🔄 Peminjaman <span class="count" id="tabCountAktif">0</span></button>
+  </div>
+
+  <!-- ══════════ VIEW: INVENTARIS ══════════ -->
+  <div class="view active" id="viewInventaris">
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Total Aset</div>
+        <div class="stat-value" id="stat-total">0</div>
+      </div>
+      <div class="stat-card gold">
+        <div class="stat-label">Total Nilai</div>
+        <div class="stat-value mono" id="stat-nilai">Rp 0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Kondisi Baik</div>
+        <div class="stat-value" id="stat-baik">0</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Perlu Perhatian</div>
+        <div class="stat-value" id="stat-masalah">0</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" placeholder="Cari nama aset, kode, atau kategori…" oninput="render()">
+      </div>
+      <select class="filter-select" id="filterKategori" onchange="render()">
+        <option value="">Semua Kategori</option>
+        <option>Peralatan</option>
+        <option>Elektronik</option>
+        <option>Kendaraan</option>
+        <option>Furnitur</option>
+        <option>Olahraga</option>
+        <option>Kesenian</option>
+        <option>Lainnya</option>
+      </select>
+      <select class="filter-select" id="filterKondisi" onchange="render()">
+        <option value="">Semua Kondisi</option>
+        <option>Baik</option>
+        <option>Rusak</option>
+        <option>Perbaikan</option>
+        <option>Tidak Ada</option>
+      </select>
+      <button class="btn-export" onclick="exportInventaris()">⬇️ Ekspor .xlsx</button>
+      <button class="btn-tambah" onclick="requirePin(() => openModal())">＋ Tambah Aset</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Kode</th>
+            <th>Nama Aset</th>
+            <th>Kategori</th>
+            <th>Jumlah</th>
+            <th>Tersedia</th>
+            <th>Kondisi</th>
+            <th>Harga Satuan (Rp)</th>
+            <th>Harga Total (Rp)</th>
+            <th>Lokasi</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div id="emptyState" class="empty-state" style="display:none">
+        <div class="icon">📦</div>
+        <p>Belum ada data aset.<br>Klik <strong>Tambah Aset</strong> untuk mulai mencatat.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════ VIEW: PEMINJAMAN ══════════ -->
+  <div class="view" id="viewPeminjaman">
+    <div class="stats-row stats-3">
+      <div class="stat-card blue">
+        <div class="stat-label">Sedang Dipinjam</div>
+        <div class="stat-value" id="stat-loan-aktif">0</div>
+      </div>
+      <div class="stat-card red">
+        <div class="stat-label">Terlambat Kembali</div>
+        <div class="stat-value" id="stat-loan-terlambat">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Riwayat Selesai</div>
+        <div class="stat-value" id="stat-loan-selesai">0</div>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInputPinjam" placeholder="Cari nama aset atau peminjam…" oninput="renderLoans()">
+      </div>
+      <select class="filter-select" id="filterStatusPinjam" onchange="renderLoans()">
+        <option value="">Semua Status</option>
+        <option value="Dipinjam">Dipinjam</option>
+        <option value="Terlambat">Terlambat</option>
+        <option value="Selesai">Selesai</option>
+      </select>
+      <button class="btn-export" onclick="exportPeminjaman()">⬇️ Ekspor .xlsx</button>
+      <button class="btn-tambah" onclick="requirePin(() => openPinjamModal())">＋ Catat Peminjaman</button>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Aset</th>
+            <th>Jml</th>
+            <th>Peminjam</th>
+            <th>Kontak</th>
+            <th>Tgl Pinjam</th>
+            <th>Rencana Kembali</th>
+            <th>Tgl Kembali</th>
+            <th>Status</th>
+            <th>Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="loanBody"></tbody>
+      </table>
+      <div id="loanEmptyState" class="empty-state" style="display:none">
+        <div class="icon">🔄</div>
+        <p>Belum ada data peminjaman.<br>Klik <strong>Catat Peminjaman</strong> untuk mulai mencatat.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL FORM ASET -->
+<div class="overlay" id="modalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="modalTitle">Tambah Aset Baru</span>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editId">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Kode Aset *</label>
+          <input type="text" id="fKode" placeholder="cth: KT-001" maxlength="20">
+        </div>
+        <div class="form-group">
+          <label>Nama Aset *</label>
+          <input type="text" id="fNama" placeholder="cth: Sound System">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Kategori *</label>
+          <select id="fKategori">
+            <option value="">— Pilih Kategori —</option>
+            <option>Peralatan</option>
+            <option>Elektronik</option>
+            <option>Kendaraan</option>
+            <option>Furnitur</option>
+            <option>Olahraga</option>
+            <option>Kesenian</option>
+            <option>Lainnya</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Jumlah *</label>
+          <input type="number" id="fJumlah" placeholder="1" min="0">
+          <div class="form-hint">Tiap unit otomatis diberi label seri (cth: KODE-A, KODE-B). Edit label lewat tombol 🏷️ Unit setelah disimpan.</div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Satuan</label>
+          <input type="text" id="fSatuan" placeholder="cth: unit, buah, set">
+        </div>
+        <div class="form-group">
+          <label>Kondisi *</label>
+          <select id="fKondisi">
+            <option value="">— Pilih Kondisi —</option>
+            <option>Baik</option>
+            <option>Rusak</option>
+            <option>Perbaikan</option>
+            <option>Tidak Ada</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nilai Aset (Rp)</label>
+          <input type="number" id="fNilai" placeholder="0" min="0">
+        </div>
+        <div class="form-group">
+          <label>Lokasi / Tempat Simpan</label>
+          <input type="text" id="fLokasi" placeholder="cth: Sekretariat">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Tanggal Perolehan</label>
+        <input type="date" id="fTanggal">
+      </div>
+      <div class="form-group">
+        <label>Keterangan</label>
+        <textarea id="fKeterangan" placeholder="Catatan tambahan tentang aset ini…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-batal" onclick="closeModal()">Batal</button>
+      <button class="btn-simpan" onclick="simpan()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DETAIL ASET -->
+<div class="overlay" id="modalDetailOverlay">
+  <div class="modal" style="max-width:600px">
+    <div class="modal-header">
+      <span class="modal-title" id="detailModalTitle">👁️ Detail Aset</span>
+      <button class="modal-close" onclick="closeDetailModal()">✕</button>
+    </div>
+    <div class="modal-body" id="detailModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-batal" onclick="closeDetailModal()">Tutup</button>
+      <button class="btn-simpan" id="detailEditBtn" onclick="">✏️ Edit Aset</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL KELOLA UNIT / NOMOR SERI -->
+<div class="overlay" id="modalUnitOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title" id="unitModalTitle">🏷️ Kelola Unit</span>
+      <button class="modal-close" onclick="closeUnitsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-hint" style="margin-bottom:1rem">Beri label/nomor seri unik untuk tiap unit (cth: HT-001-A, HT-001-B) supaya saat dipinjam jelas unit mana yang dibawa.</div>
+      <div id="unitsList"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-batal" onclick="closeUnitsModal()">Tutup</button>
+      <button class="btn-simpan" onclick="simpanUnits()">💾 Simpan Unit</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL FORM PEMINJAMAN -->
+<div class="overlay" id="modalPinjamOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">📤 Catat Peminjaman</span>
+      <button class="modal-close" onclick="closePinjamModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Pilih Aset *</label>
+        <select id="pAsetId" onchange="updateUnitCheckboxes()"></select>
+        <div class="form-hint" id="tersediaHint"></div>
+      </div>
+      <div class="form-group">
+        <label>Pilih Unit yang Dipinjam *</label>
+        <div class="unit-quick-btns">
+          <button type="button" class="btn-quick" onclick="pilihSemuaUnit()">✅ Pilih Semua</button>
+          <button type="button" class="btn-quick" onclick="kosongkanUnit()">✖️ Kosongkan</button>
+        </div>
+        <div class="unit-check-wrap" id="unitCheckboxWrap"></div>
+        <div class="form-hint" id="jumlahTerpilihHint">0 unit dipilih</div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Nama Peminjam *</label>
+          <input type="text" id="pPeminjam" placeholder="cth: Budi Santoso">
+        </div>
+        <div class="form-group">
+          <label>Kontak (HP/WA)</label>
+          <input type="text" id="pKontak" placeholder="cth: 08123456789">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Tanggal Pinjam *</label>
+          <input type="date" id="pTglPinjam">
+        </div>
+        <div class="form-group"></div>
+      </div>
+      <div class="form-group">
+        <label>Rencana Tanggal Kembali</label>
+        <input type="date" id="pRencanaKembali">
+      </div>
+      <div class="form-group">
+        <label>Catatan</label>
+        <textarea id="pCatatan" placeholder="Keperluan peminjaman, dsb…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-batal" onclick="closePinjamModal()">Batal</button>
+      <button class="btn-simpan" onclick="simpanPeminjaman()">💾 Simpan</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PENGEMBALIAN -->
+<div class="overlay" id="modalKembaliOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <span class="modal-title">🔄 Catat Pengembalian</span>
+      <button class="modal-close" onclick="closeKembaliModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" id="kembaliInfo" style="font-size:0.88rem;color:var(--abu-tengah);margin-bottom:1rem"></div>
+      <div class="form-group">
+        <label>Tanggal Kembali *</label>
+        <input type="date" id="kTglKembali">
+      </div>
+      <div class="form-group">
+        <label>Kondisi Aset Saat Kembali</label>
+        <select id="kKondisi">
+          <option value="">— Tidak berubah —</option>
+          <option>Baik</option>
+          <option>Rusak</option>
+          <option>Perbaikan</option>
+          <option>Tidak Ada</option>
+        </select>
+        <div class="form-hint">Jika diisi, kondisi aset di data Inventaris akan diperbarui.</div>
+      </div>
+      <div class="form-group">
+        <label>Catatan Pengembalian</label>
+        <textarea id="kCatatan" placeholder="cth: kembali lengkap, ada baret kecil, dsb…"></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-batal" onclick="closeKembaliModal()">Batal</button>
+      <button class="btn-simpan" onclick="simpanKembali()">✅ Konfirmasi Kembali</button>
+    </div>
+  </div>
+</div>
+
+<!-- CONFIRM HAPUS -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <div class="confirm-icon">🗑️</div>
+    <div class="confirm-title" id="confirmTitle">Hapus Aset?</div>
+    <div class="confirm-msg" id="confirmMsg">Data aset ini akan dihapus permanen dan tidak bisa dikembalikan.</div>
+    <div class="confirm-btns">
+      <button class="btn-no" onclick="closeConfirm()">Batal</button>
+      <button class="btn-yes" onclick="konfirmasiHapus()">Ya, Hapus</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════ KONFIGURASI SINKRONISASI CLOUD (Google Sheets) ══════════
+// 1. Deploy Google Apps Script sebagai Web App (lihat panduan yang menyertai file ini),
+//    lalu tempel URL-nya (diakhiri /exec) di bawah ini.
+// 2. Ganti EDIT_PIN dengan kode akses rahasia untuk pengurus.
+// Jika API_URL dikosongkan, aplikasi tetap berjalan normal memakai penyimpanan lokal (localStorage)
+// seperti sebelumnya — hanya saja data tidak akan tersinkron ke perangkat lain.
+const CONFIG = {
+  API_URL: 'https://script.google.com/macros/s/AKfycbzEjCVZ4P7g2czNbetJ06Bi6sSByWg70nyEscVrpu5yj40anmzhq_Yblfy4Sj3Kgbzbpw/exec',            // <-- TEMPEL URL WEB APP APPS SCRIPT DI SINI
+  EDIT_PIN: '1234'        // <-- GANTI KODE AKSES PENGURUS DI SINI
+};
+
+const STORAGE_KEY = 'kt_inventaris_v1';
+const LOAN_KEY = 'kt_peminjaman_v1';
+let db = [];
+let loans = [];
+let hapusId = null;
+let hapusType = null; // 'aset' | 'pinjam'
+let kembaliLoanId = null;
+let unlocked = false;       // status akses edit untuk sesi ini
+let syncTimer = null;
+let isSyncing = false;
+
+// ─── AKSES PENGURUS (PIN) ───
+// Bungkus setiap aksi yang mengubah data dengan ini, supaya hanya pengurus ber-PIN yang bisa lanjut.
+function requirePin(action) {
+  if (unlocked) { action(); return; }
+  const pin = prompt('🔒 Masukkan kode akses pengurus untuk mengedit data:');
+  if (pin === null) return; // dibatalkan
+  if (pin === CONFIG.EDIT_PIN) {
+    unlocked = true;
+    showToast('🔓 Akses edit dibuka untuk sesi ini di perangkat ini');
+    action();
+  } else {
+    showToast('⚠️ Kode akses salah!', true);
+  }
+}
+
+// ─── DB helpers (lokal + sinkron cloud) ───
+function loadDB() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    db = raw ? JSON.parse(raw) : [];
+  } catch { db = []; }
+}
+function saveDBLocal() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+}
+function saveDB() {
+  saveDBLocal();
+  syncToCloud();
+}
+function loadLoans() {
+  try {
+    const raw = localStorage.getItem(LOAN_KEY);
+    loans = raw ? JSON.parse(raw) : [];
+  } catch { loans = []; }
+}
+function saveLoansLocal() {
+  localStorage.setItem(LOAN_KEY, JSON.stringify(loans));
+}
+function saveLoans() {
+  saveLoansLocal();
+  syncToCloud();
+}
+
+// Kirim seluruh data (db + loans) ke Google Sheets, dengan jeda singkat (debounce)
+// supaya tidak mengirim berkali-kali saat banyak perubahan beruntun.
+function syncToCloud() {
+  if (!CONFIG.API_URL) { setSyncBadge('local'); return; }
+  setSyncBadge('syncing');
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(() => {
+    isSyncing = true;
+    fetch(CONFIG.API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari CORS preflight di Apps Script
+      body: JSON.stringify({ pin: CONFIG.EDIT_PIN, data: { db, loans } })
+    })
+      .then(r => r.json())
+      .then(res => {
+        isSyncing = false;
+        if (res.ok) { setSyncBadge('online'); }
+        else { setSyncBadge('error'); showToast('⚠️ Gagal sinkron: ' + (res.error || 'PIN cloud tidak cocok'), true); }
+      })
+      .catch(() => { isSyncing = false; setSyncBadge('offline'); showToast('⚠️ Gagal sinkron ke cloud (offline?). Data tetap tersimpan di perangkat ini.', true); });
+  }, 500);
+}
+
+// Ambil data terbaru dari Google Sheets saat aplikasi dibuka / saat "Muat Ulang" ditekan.
+function loadFromCloud(callback) {
+  if (!CONFIG.API_URL) { setSyncBadge('local'); callback(); return; }
+  setSyncBadge('syncing');
+  fetch(CONFIG.API_URL)
+    .then(r => r.json())
+    .then(res => {
+      if (res.ok && res.data) {
+        db = res.data.db || [];
+        loans = res.data.loans || [];
+        saveDBLocal();
+        saveLoansLocal();
+        setSyncBadge('online');
+      } else {
+        setSyncBadge('error');
+      }
+      callback();
+    })
+    .catch(() => {
+      setSyncBadge('offline');
+      showToast('⚠️ Gagal memuat data cloud. Menampilkan data tersimpan terakhir di perangkat ini.', true);
+      callback();
+    });
+}
+function muatUlangCloud() {
+  loadFromCloud(() => { ensureUnits(); migrateLoanUnits(); render(); renderLoans(); showToast('✅ Data terbaru dari cloud dimuat!'); });
+}
+function setSyncBadge(state) {
+  const el = document.getElementById('syncBadge');
+  if (!el) return;
+  const map = {
+    local:   ['💾 Mode Lokal', 'sync-local'],
+    syncing: ['🔄 Menyinkronkan…', 'sync-syncing'],
+    online:  ['☁️ Tersinkron', 'sync-online'],
+    offline: ['📴 Offline', 'sync-offline'],
+    error:   ['⚠️ Gagal Sinkron', 'sync-offline']
+  };
+  const [label, cls] = map[state] || map.local;
+  el.textContent = label;
+  el.className = 'sync-badge ' + cls;
+}
+
+function genId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+}
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+// ─── TABS ───
+function switchTab(tab) {
+  const isInv = tab === 'inventaris';
+  document.getElementById('viewInventaris').classList.toggle('active', isInv);
+  document.getElementById('viewPeminjaman').classList.toggle('active', !isInv);
+  document.getElementById('tabBtnInventaris').classList.toggle('active', isInv);
+  document.getElementById('tabBtnPeminjaman').classList.toggle('active', !isInv);
+  if (isInv) render(); else renderLoans();
+}
+
+// ─── STOK / TERSEDIA ───
+function computeTersedia(item) {
+  if (!Array.isArray(item.units)) return Math.max(0, item.jumlah || 0);
+  return item.units.filter(u => u.status === 'Tersedia').length;
+}
+function isTerlambat(l) {
+  return l.status === 'Dipinjam' && l.rencanaKembali && l.rencanaKembali < todayStr();
+}
+
+// ─── UNIT / NOMOR SERI ───
+function unitSuffix(idx) {
+  // 0 -> A, 1 -> B ... 25 -> Z, 26 -> AA, dst (gaya penomoran kolom spreadsheet)
+  let i = idx + 1;
+  let s = '';
+  while (i > 0) {
+    const rem = (i - 1) % 26;
+    s = String.fromCharCode(65 + rem) + s;
+    i = Math.floor((i - 1) / 26);
+  }
+  return s;
+}
+
+// Pastikan setiap aset punya array `units` yang jumlahnya sesuai field `jumlah`.
+// Dipanggil setelah load data lama (migrasi) dan setiap kali jumlah aset berubah.
+function ensureUnits() {
+  let changed = false;
+  db.forEach(item => {
+    if (!Array.isArray(item.units)) { item.units = []; changed = true; }
+    const target = item.jumlah || 0;
+    while (item.units.length < target) {
+      const idx = item.units.length;
+      item.units.push({
+        id: genId(),
+        label: (item.kode || 'UNIT') + '-' + unitSuffix(idx),
+        kondisi: item.kondisi || 'Baik',
+        status: 'Tersedia'
+      });
+      changed = true;
+    }
+    // kurangi unit berlebih hanya jika unit tersebut masih Tersedia (belum dipinjam)
+    while (item.units.length > target && item.units[item.units.length - 1].status === 'Tersedia') {
+      item.units.pop();
+      changed = true;
+    }
+  });
+  if (changed) saveDB();
+}
+
+// Migrasi data peminjaman lama (sebelum fitur unit ada) agar tetap tertaut ke unit spesifik.
+function migrateLoanUnits() {
+  let changedLoans = false, changedDb = false;
+  loans.forEach(l => {
+    if (!Array.isArray(l.unitIds)) {
+      l.unitIds = [];
+      l.unitLabels = l.unitLabels || [];
+      if (l.status === 'Dipinjam') {
+        const item = db.find(d => d.id === l.assetId);
+        if (item) {
+          const avail = item.units.filter(u => u.status === 'Tersedia').slice(0, l.jumlah || 0);
+          avail.forEach(u => { u.status = 'Dipinjam'; });
+          l.unitIds = avail.map(u => u.id);
+          l.unitLabels = avail.map(u => u.label);
+          changedDb = true;
+        }
+      }
+      changedLoans = true;
+    }
+  });
+  if (changedLoans) saveLoans();
+  if (changedDb) saveDB();
+}
+
+// ─── MODAL ASET ───
+function openModal(id = null) {
+  clearForm();
+  document.getElementById('editId').value = '';
+  if (id) {
+    const item = db.find(d => d.id === id);
+    if (!item) return;
+    document.getElementById('editId').value = item.id;
+    document.getElementById('modalTitle').textContent = '✏️ Edit Aset';
+    document.getElementById('fKode').value      = item.kode || '';
+    document.getElementById('fNama').value      = item.nama || '';
+    document.getElementById('fKategori').value  = item.kategori || '';
+    document.getElementById('fJumlah').value    = item.jumlah || '';
+    document.getElementById('fSatuan').value    = item.satuan || '';
+    document.getElementById('fKondisi').value   = item.kondisi || '';
+    document.getElementById('fNilai').value     = item.nilai || '';
+    document.getElementById('fLokasi').value    = item.lokasi || '';
+    document.getElementById('fTanggal').value   = item.tanggal || '';
+    document.getElementById('fKeterangan').value= item.keterangan || '';
+  } else {
+    document.getElementById('modalTitle').textContent = '＋ Tambah Aset Baru';
+    // auto-generate kode
+    const next = db.length + 1;
+    document.getElementById('fKode').value = 'KT-' + String(next).padStart(3, '0');
+  }
+  document.getElementById('modalOverlay').classList.add('active');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('active');
+}
+function clearForm() {
+  ['fKode','fNama','fKategori','fJumlah','fSatuan','fKondisi','fNilai','fLokasi','fTanggal','fKeterangan']
+    .forEach(id => document.getElementById(id).value = '');
+}
+
+// ─── SIMPAN ASET ───
+function simpan() {
+  const kode      = document.getElementById('fKode').value.trim();
+  const nama      = document.getElementById('fNama').value.trim();
+  const kategori  = document.getElementById('fKategori').value;
+  const jumlah    = document.getElementById('fJumlah').value;
+  const satuan    = document.getElementById('fSatuan').value.trim();
+  const kondisi   = document.getElementById('fKondisi').value;
+  const nilai     = parseFloat(document.getElementById('fNilai').value) || 0;
+  const lokasi    = document.getElementById('fLokasi').value.trim();
+  const tanggal   = document.getElementById('fTanggal').value;
+  const keterangan= document.getElementById('fKeterangan').value.trim();
+  const editId    = document.getElementById('editId').value;
+
+  if (!kode || !nama || !kategori || jumlah === '' || !kondisi) {
+    showToast('⚠️ Lengkapi semua field wajib!', true); return;
+  }
+
+  if (editId) {
+    const idx = db.findIndex(d => d.id === editId);
+    if (idx !== -1) {
+      db[idx] = { ...db[idx], kode, nama, kategori, jumlah: parseInt(jumlah), satuan, kondisi, nilai, lokasi, tanggal, keterangan };
+      showToast('✅ Aset berhasil diperbarui!');
+    }
+  } else {
+    // cek duplikat kode
+    if (db.some(d => d.kode === kode)) {
+      showToast('⚠️ Kode aset sudah digunakan!', true); return;
+    }
+    db.push({ id: genId(), kode, nama, kategori, jumlah: parseInt(jumlah), satuan, kondisi, nilai, lokasi, tanggal, keterangan, createdAt: Date.now() });
+    showToast('✅ Aset berhasil ditambahkan!');
+  }
+
+  ensureUnits();
+  saveDB();
+  closeModal();
+  render();
+}
+
+// ─── MODAL DETAIL ASET ───
+function openDetailModal(id) {
+  const item = db.find(d => d.id === id);
+  if (!item) return;
+  const tersedia = computeTersedia(item);
+  const dipinjam = (item.units || []).filter(u => u.status === 'Dipinjam').length;
+  const hargaSatuan = item.nilai || 0;
+  const hargaTotal = hargaSatuan * (item.jumlah || 0);
+  const kondisiClass = { 'Baik': 'baik', 'Rusak': 'rusak', 'Perbaikan': 'perbaikan', 'Tidak Ada': 'tidak-ada' };
+
+  document.getElementById('detailModalTitle').textContent = `👁️ ${item.nama}`;
+
+  const unitRowsHtml = (item.units || []).length
+    ? item.units.map(u => {
+        const loan = u.status === 'Dipinjam'
+          ? loans.find(l => l.status === 'Dipinjam' && (l.unitIds || []).includes(u.id))
+          : null;
+        return `<div class="detail-unit-row">
+          <span class="lbl">${esc(u.label)}</span>
+          <span>${esc(u.kondisi || item.kondisi)}</span>
+          <span class="badge-status ${u.status === 'Dipinjam' ? 'dipinjam' : 'selesai'}">${esc(u.status)}${loan ? ' · ' + esc(loan.peminjam) : ''}</span>
+        </div>`;
+      }).join('')
+    : '<div class="unit-check-empty">Belum ada unit tercatat.</div>';
+
+  document.getElementById('detailModalBody').innerHTML = `
+    <div class="detail-grid">
+      <div class="detail-item">
+        <div class="detail-label">Kode Aset</div>
+        <div class="detail-value mono">${esc(item.kode)}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Kategori</div>
+        <div class="detail-value"><span class="badge-kategori">${esc(item.kategori)}</span></div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Kondisi</div>
+        <div class="detail-value"><span class="badge-kondisi ${kondisiClass[item.kondisi]||''}">${esc(item.kondisi)}</span></div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Lokasi / Tempat Simpan</div>
+        <div class="detail-value">${esc(item.lokasi) || '—'}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Jumlah Total</div>
+        <div class="detail-value">${item.jumlah || 0} ${esc(item.satuan || '')}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Tersedia / Dipinjam</div>
+        <div class="detail-value">${tersedia} tersedia · ${dipinjam} dipinjam</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Harga Satuan</div>
+        <div class="detail-value harga">${hargaSatuan ? 'Rp ' + hargaSatuan.toLocaleString('id-ID') : '—'}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Harga Total (Jumlah × Satuan)</div>
+        <div class="detail-value harga-total">${hargaTotal ? 'Rp ' + hargaTotal.toLocaleString('id-ID') : '—'}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Tanggal Perolehan</div>
+        <div class="detail-value">${item.tanggal ? formatTgl(item.tanggal) : '—'}</div>
+      </div>
+      <div class="detail-item">
+        <div class="detail-label">Dibuat</div>
+        <div class="detail-value">${item.createdAt ? new Date(item.createdAt).toLocaleDateString('id-ID') : '—'}</div>
+      </div>
+      <div class="detail-item full">
+        <div class="detail-label">Keterangan</div>
+        <div class="detail-value" style="font-weight:400">${esc(item.keterangan) || '—'}</div>
+      </div>
+    </div>
+    <hr class="detail-divider">
+    <div class="detail-subtitle">🏷️ Unit / Nomor Seri (${(item.units||[]).length})</div>
+    <div class="detail-unit-summary">
+      <span class="detail-unit-chip tersedia">${tersedia} Tersedia</span>
+      <span class="detail-unit-chip dipinjam">${dipinjam} Dipinjam</span>
+    </div>
+    <div class="detail-unit-list">${unitRowsHtml}</div>
+  `;
+
+  document.getElementById('detailEditBtn').onclick = () => { closeDetailModal(); requirePin(() => openModal(item.id)); };
+  document.getElementById('modalDetailOverlay').classList.add('active');
+}
+function closeDetailModal() {
+  document.getElementById('modalDetailOverlay').classList.remove('active');
+}
+
+// ─── MODAL KELOLA UNIT / NOMOR SERI ───
+let unitsModalItemId = null;
+function openUnitsModal(id) {
+  const item = db.find(d => d.id === id);
+  if (!item) return;
+  unitsModalItemId = id;
+  document.getElementById('unitModalTitle').textContent = `🏷️ Kelola Unit — ${item.nama}`;
+  renderUnitsList();
+  document.getElementById('modalUnitOverlay').classList.add('active');
+}
+function closeUnitsModal() {
+  unitsModalItemId = null;
+  document.getElementById('modalUnitOverlay').classList.remove('active');
+}
+function renderUnitsList() {
+  const item = db.find(d => d.id === unitsModalItemId);
+  if (!item) return;
+  const wrap = document.getElementById('unitsList');
+  if (!item.units.length) {
+    wrap.innerHTML = '<div class="unit-check-empty">Belum ada unit. Isi Jumlah pada form aset lalu simpan.</div>';
+    return;
+  }
+  const kondisiList = ['Baik', 'Rusak', 'Perbaikan', 'Tidak Ada'];
+  wrap.innerHTML = item.units.map(u => {
+    const loan = u.status === 'Dipinjam'
+      ? loans.find(l => l.status === 'Dipinjam' && (l.unitIds || []).includes(u.id))
+      : null;
+    const kondisiOpts = kondisiList.map(k => `<option ${((u.kondisi||item.kondisi)===k)?'selected':''}>${k}</option>`).join('');
+    return `
+      <div class="unit-row">
+        <input type="text" value="${esc(u.label)}" data-unit-id="${u.id}" class="unit-label-input">
+        <select data-unit-id="${u.id}" class="unit-kondisi-select">${kondisiOpts}</select>
+        <span class="badge-status ${u.status === 'Dipinjam' ? 'dipinjam' : 'selesai'}">${esc(u.status)}</span>
+        <span class="unit-peminjam-note">${loan ? 'oleh ' + esc(loan.peminjam) : ''}</span>
+      </div>`;
+  }).join('');
+}
+function simpanUnits() {
+  const item = db.find(d => d.id === unitsModalItemId);
+  if (!item) return;
+  const labelInputs = document.querySelectorAll('.unit-label-input');
+  const seen = new Set();
+  for (const inp of labelInputs) {
+    const val = inp.value.trim();
+    if (!val) { showToast('⚠️ Label unit tidak boleh kosong!', true); return; }
+    const key = val.toLowerCase();
+    if (seen.has(key)) { showToast('⚠️ Label unit tidak boleh duplikat: ' + val, true); return; }
+    seen.add(key);
+  }
+  labelInputs.forEach(inp => {
+    const u = item.units.find(x => x.id === inp.dataset.unitId);
+    if (u) u.label = inp.value.trim();
+  });
+  document.querySelectorAll('.unit-kondisi-select').forEach(sel => {
+    const u = item.units.find(x => x.id === sel.dataset.unitId);
+    if (u) u.kondisi = sel.value;
+  });
+  // sinkronkan label unit yang sedang dipinjam ke catatan peminjaman aktif
+  loans.forEach(l => {
+    if (l.status === 'Dipinjam' && l.assetId === item.id && Array.isArray(l.unitIds)) {
+      l.unitLabels = l.unitIds.map(uid => {
+        const u = item.units.find(x => x.id === uid);
+        return u ? u.label : '';
+      });
+    }
+  });
+  saveDB();
+  saveLoans();
+  render();
+  renderLoans();
+  closeUnitsModal();
+  showToast('✅ Data unit berhasil disimpan!');
+}
+
+// ─── HAPUS (generik: aset / pinjam) ───
+function hapus(id) {
+  hapusType = 'aset';
+  hapusId = id;
+  const item = db.find(d => d.id === id);
+  const dipinjamCount = item && item.units ? item.units.filter(u => u.status === 'Dipinjam').length : 0;
+  document.getElementById('confirmTitle').textContent = 'Hapus Aset?';
+  document.getElementById('confirmMsg').textContent = dipinjamCount > 0
+    ? `⚠️ ${dipinjamCount} unit dari aset ini sedang dipinjam. Data aset tetap akan dihapus permanen dan tidak bisa dikembalikan.`
+    : 'Data aset ini akan dihapus permanen dan tidak bisa dikembalikan.';
+  document.getElementById('confirmOverlay').classList.add('active');
+}
+function hapusPinjam(id) {
+  hapusType = 'pinjam';
+  hapusId = id;
+  document.getElementById('confirmTitle').textContent = 'Hapus Riwayat Peminjaman?';
+  document.getElementById('confirmMsg').textContent = 'Data peminjaman ini akan dihapus permanen dan tidak bisa dikembalikan.';
+  document.getElementById('confirmOverlay').classList.add('active');
+}
+function closeConfirm() {
+  hapusId = null;
+  hapusType = null;
+  document.getElementById('confirmOverlay').classList.remove('active');
+}
+function konfirmasiHapus() {
+  if (!hapusId) return;
+  if (hapusType === 'aset') {
+    db = db.filter(d => d.id !== hapusId);
+    saveDB();
+    render();
+    renderLoans();
+    showToast('🗑️ Aset berhasil dihapus!');
+  } else if (hapusType === 'pinjam') {
+    const loan = loans.find(l => l.id === hapusId);
+    // Jika riwayat yang dihapus masih berstatus Dipinjam, kembalikan dulu status unit terkait ke Tersedia
+    // supaya unit tidak "tersangkut" selamanya sebagai Dipinjam.
+    if (loan && loan.status === 'Dipinjam' && Array.isArray(loan.unitIds)) {
+      const item = db.find(d => d.id === loan.assetId);
+      if (item) {
+        loan.unitIds.forEach(uid => {
+          const u = item.units.find(x => x.id === uid);
+          if (u) u.status = 'Tersedia';
+        });
+        saveDB();
+      }
+    }
+    loans = loans.filter(l => l.id !== hapusId);
+    saveLoans();
+    renderLoans();
+    render();
+    showToast('🗑️ Riwayat peminjaman berhasil dihapus!');
+  }
+  closeConfirm();
+}
+
+// ─── MODAL PEMINJAMAN ───
+function openPinjamModal(assetId = null) {
+  const sel = document.getElementById('pAsetId');
+  sel.innerHTML = db.map(d => {
+    const tersedia = computeTersedia(d);
+    return `<option value="${d.id}" ${tersedia<=0?'disabled':''}>${esc(d.kode)} — ${esc(d.nama)} (tersedia: ${tersedia} ${esc(d.satuan||'')})</option>`;
+  }).join('');
+  if (db.length === 0) {
+    sel.innerHTML = '<option value="">— Belum ada aset, tambahkan dahulu —</option>';
+  }
+  document.getElementById('pPeminjam').value = '';
+  document.getElementById('pKontak').value = '';
+  document.getElementById('pTglPinjam').value = todayStr();
+  document.getElementById('pRencanaKembali').value = '';
+  document.getElementById('pCatatan').value = '';
+  if (assetId) sel.value = assetId;
+  updateUnitCheckboxes();
+  document.getElementById('modalPinjamOverlay').classList.add('active');
+}
+function closePinjamModal() {
+  document.getElementById('modalPinjamOverlay').classList.remove('active');
+}
+
+// Render checklist unit tersedia untuk aset yang dipilih
+function updateUnitCheckboxes() {
+  const sel = document.getElementById('pAsetId');
+  const item = db.find(d => d.id === sel.value);
+  const wrap = document.getElementById('unitCheckboxWrap');
+  const hint = document.getElementById('tersediaHint');
+  const jumlahHint = document.getElementById('jumlahTerpilihHint');
+
+  if (!item) {
+    wrap.innerHTML = '<div class="unit-check-empty">Pilih aset terlebih dahulu.</div>';
+    hint.textContent = '';
+    jumlahHint.textContent = '0 unit dipilih';
+    return;
+  }
+
+  const tersedia = computeTersedia(item);
+  hint.textContent = `Stok tersedia saat ini: ${tersedia} ${item.satuan || ''}`;
+
+  const availUnits = (item.units || []).filter(u => u.status === 'Tersedia');
+  if (availUnits.length === 0) {
+    wrap.innerHTML = '<div class="unit-check-empty">Tidak ada unit yang tersedia.</div>';
+    jumlahHint.textContent = '0 unit dipilih';
+    return;
+  }
+
+  wrap.innerHTML = availUnits.map(u => `
+    <label class="unit-check-label">
+      <input type="checkbox" value="${u.id}" onchange="updateJumlahTerpilih()">
+      <span>${esc(u.label)}</span>
+      <small style="color:#888;margin-left:auto">${esc(u.kondisi||'')}</small>
+    </label>
+  `).join('');
+
+  updateJumlahTerpilih();
+}
+
+function updateJumlahTerpilih() {
+  const checked = document.querySelectorAll('#unitCheckboxWrap input[type=checkbox]:checked').length;
+  document.getElementById('jumlahTerpilihHint').textContent = `${checked} unit dipilih`;
+}
+
+function pilihSemuaUnit() {
+  document.querySelectorAll('#unitCheckboxWrap input[type=checkbox]').forEach(cb => cb.checked = true);
+  updateJumlahTerpilih();
+}
+
+function kosongkanUnit() {
+  document.querySelectorAll('#unitCheckboxWrap input[type=checkbox]').forEach(cb => cb.checked = false);
+  updateJumlahTerpilih();
+}
+
+function simpanPeminjaman() {
+  const assetId = document.getElementById('pAsetId').value;
+  const peminjam = document.getElementById('pPeminjam').value.trim();
+  const kontak = document.getElementById('pKontak').value.trim();
+  const tglPinjam = document.getElementById('pTglPinjam').value;
+  const rencanaKembali = document.getElementById('pRencanaKembali').value;
+  const catatan = document.getElementById('pCatatan').value.trim();
+
+  const item = db.find(d => d.id === assetId);
+  if (!item) { showToast('⚠️ Pilih aset yang akan dipinjam!', true); return; }
+  if (!peminjam || !tglPinjam) {
+    showToast('⚠️ Lengkapi semua field wajib!', true); return;
+  }
+
+  // Kumpulkan unit yang dicentang
+  const checkedBoxes = [...document.querySelectorAll('#unitCheckboxWrap input[type=checkbox]:checked')];
+  if (checkedBoxes.length === 0) {
+    showToast('⚠️ Pilih minimal 1 unit yang akan dipinjam!', true); return;
+  }
+
+  const selectedUnitIds = checkedBoxes.map(cb => cb.value);
+  const selectedUnits = selectedUnitIds.map(uid => item.units.find(u => u.id === uid)).filter(Boolean);
+
+  // Tandai unit sebagai Dipinjam
+  selectedUnits.forEach(u => { u.status = 'Dipinjam'; });
+  saveDB();
+
+  loans.push({
+    id: genId(),
+    assetId: item.id,
+    kodeAset: item.kode,
+    namaAset: item.nama,
+    satuan: item.satuan,
+    jumlah: selectedUnits.length,
+    unitIds: selectedUnitIds,
+    unitLabels: selectedUnits.map(u => u.label),
+    peminjam,
+    kontak,
+    tglPinjam,
+    rencanaKembali,
+    tglKembali: '',
+    status: 'Dipinjam',
+    catatanPinjam: catatan,
+    catatanKembali: '',
+    createdAt: Date.now()
+  });
+  saveLoans();
+  closePinjamModal();
+  renderLoans();
+  render();
+  showToast('✅ Peminjaman berhasil dicatat!');
+}
+
+// ─── MODAL PENGEMBALIAN ───
+function openKembaliModal(loanId) {
+  const loan = loans.find(l => l.id === loanId);
+  if (!loan) return;
+  kembaliLoanId = loanId;
+  document.getElementById('kembaliInfo').innerHTML =
+    `<strong>${esc(loan.namaAset)}</strong> (${esc(loan.kodeAset)}) · ${loan.jumlah} ${esc(loan.satuan||'')}${loan.unitLabels && loan.unitLabels.length ? '<br>Unit: <strong>'+loan.unitLabels.map(esc).join(', ')+'</strong>' : ''}<br>Dipinjam oleh <strong>${esc(loan.peminjam)}</strong> sejak ${formatTgl(loan.tglPinjam)}`;
+  document.getElementById('kTglKembali').value = todayStr();
+  document.getElementById('kKondisi').value = '';
+  document.getElementById('kCatatan').value = '';
+  document.getElementById('modalKembaliOverlay').classList.add('active');
+}
+function closeKembaliModal() {
+  kembaliLoanId = null;
+  document.getElementById('modalKembaliOverlay').classList.remove('active');
+}
+function simpanKembali() {
+  const loan = loans.find(l => l.id === kembaliLoanId);
+  if (!loan) return;
+  const tglKembali = document.getElementById('kTglKembali').value;
+  const kondisiBaru = document.getElementById('kKondisi').value;
+  const catatan = document.getElementById('kCatatan').value.trim();
+
+  if (!tglKembali) { showToast('⚠️ Isi tanggal kembali!', true); return; }
+
+  loan.status = 'Selesai';
+  loan.tglKembali = tglKembali;
+  loan.catatanKembali = catatan;
+
+  // Kembalikan status unit ke Tersedia
+  const item = db.find(d => d.id === loan.assetId);
+  if (item && Array.isArray(loan.unitIds)) {
+    loan.unitIds.forEach(uid => {
+      const u = item.units.find(x => x.id === uid);
+      if (u) {
+        u.status = 'Tersedia';
+        if (kondisiBaru) u.kondisi = kondisiBaru;
+      }
+    });
+    // Update kondisi aset induk jika semua unit berstatus sama
+    if (kondisiBaru) {
+      const semuaSama = item.units.every(u => u.kondisi === kondisiBaru);
+      if (semuaSama) item.kondisi = kondisiBaru;
+    }
+    saveDB();
+  }
+
+  saveLoans();
+  closeKembaliModal();
+  renderLoans();
+  render();
+  showToast('✅ Pengembalian berhasil dicatat!');
+}
+
+// ─── RENDER INVENTARIS ───
+function render() {
+  const q   = document.getElementById('searchInput').value.toLowerCase();
+  const kat = document.getElementById('filterKategori').value;
+  const kon = document.getElementById('filterKondisi').value;
+
+  let filtered = db.filter(d => {
+    const matchQ = !q || d.nama.toLowerCase().includes(q) || d.kode.toLowerCase().includes(q) || (d.kategori||'').toLowerCase().includes(q);
+    const matchK = !kat || d.kategori === kat;
+    const matchKon = !kon || d.kondisi === kon;
+    return matchQ && matchK && matchKon;
+  });
+
+  // stats
+  const totalNilai = db.reduce((s, d) => s + (d.nilai || 0) * (d.jumlah || 1), 0);
+  document.getElementById('stat-total').textContent = db.length;
+  document.getElementById('stat-nilai').textContent = 'Rp ' + totalNilai.toLocaleString('id-ID');
+  document.getElementById('stat-baik').textContent = db.filter(d => d.kondisi === 'Baik').length;
+  document.getElementById('stat-masalah').textContent = db.filter(d => d.kondisi === 'Rusak' || d.kondisi === 'Perbaikan').length;
+
+  const tbody = document.getElementById('tableBody');
+  const empty = document.getElementById('emptyState');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+
+    const kondisiClass = { 'Baik': 'baik', 'Rusak': 'rusak', 'Perbaikan': 'perbaikan', 'Tidak Ada': 'tidak-ada' };
+
+    tbody.innerHTML = filtered.map(d => {
+      const tersedia = computeTersedia(d);
+      return `
+      <tr>
+        <td class="td-kode">${esc(d.kode)}</td>
+        <td class="td-nama">${esc(d.nama)}${d.keterangan ? `<br><small style="color:#888;font-weight:400">${esc(d.keterangan.slice(0,60))}${d.keterangan.length>60?'…':''}</small>` : ''}</td>
+        <td><span class="badge-kategori">${esc(d.kategori)}</span></td>
+        <td><strong>${d.jumlah}</strong> ${d.satuan ? `<small style="color:#888">${esc(d.satuan)}</small>` : ''}</td>
+        <td><span class="badge-tersedia ${tersedia<=0?'habis':'ok'}">${tersedia}</span></td>
+        <td><span class="badge-kondisi ${kondisiClass[d.kondisi]||''}">${esc(d.kondisi)}</span></td>
+        <td class="td-nilai">${d.nilai ? 'Rp '+Number(d.nilai).toLocaleString('id-ID') : '—'}</td>
+        <td class="td-nilai">${d.nilai ? 'Rp '+(Number(d.nilai)*(d.jumlah||1)).toLocaleString('id-ID') : '—'}</td>
+        <td style="color:#666;font-size:.82rem">${esc(d.lokasi)||'—'}</td>
+        <td>
+          <div class="actions">
+            <button class="btn-detail" onclick="openDetailModal('${d.id}')">👁️ Detail</button>
+            <button class="btn-pinjam" onclick="requirePin(() => openPinjamModal('${d.id}'))" ${tersedia<=0?'disabled':''}>📤 Pinjam</button>
+            <button class="btn-unit" onclick="requirePin(() => openUnitsModal('${d.id}'))">🏷️ Unit</button>
+            <button class="btn-edit" onclick="requirePin(() => openModal('${d.id}'))">✏️</button>
+            <button class="btn-hapus" onclick="requirePin(() => hapus('${d.id}'))">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    }).join('');
+  }
+
+  // update badge jumlah tab peminjaman aktif
+  const aktifCount = loans.filter(l => l.status === 'Dipinjam').length;
+  document.getElementById('tabCountAktif').textContent = aktifCount;
+}
+
+// ─── RENDER PEMINJAMAN ───
+function renderLoans() {
+  const q = document.getElementById('searchInputPinjam').value.toLowerCase();
+  const statusFilter = document.getElementById('filterStatusPinjam').value;
+
+  let filtered = loans.filter(l => {
+    const effStatus = isTerlambat(l) ? 'Terlambat' : l.status;
+    const matchQ = !q || l.namaAset.toLowerCase().includes(q) || l.peminjam.toLowerCase().includes(q) || l.kodeAset.toLowerCase().includes(q);
+    const matchStatus = !statusFilter || effStatus === statusFilter;
+    return matchQ && matchStatus;
+  }).sort((a, b) => (b.createdAt||0) - (a.createdAt||0));
+
+  document.getElementById('stat-loan-aktif').textContent = loans.filter(l => l.status === 'Dipinjam').length;
+  document.getElementById('stat-loan-terlambat').textContent = loans.filter(isTerlambat).length;
+  document.getElementById('stat-loan-selesai').textContent = loans.filter(l => l.status === 'Selesai').length;
+
+  const tbody = document.getElementById('loanBody');
+  const empty = document.getElementById('loanEmptyState');
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+  } else {
+    empty.style.display = 'none';
+    tbody.innerHTML = filtered.map(l => {
+      const terlambat = isTerlambat(l);
+      const statusClass = terlambat ? 'terlambat' : (l.status === 'Selesai' ? 'selesai' : 'dipinjam');
+      const statusLabel = terlambat ? 'Terlambat' : l.status;
+      return `
+      <tr>
+        <td class="td-nama">${esc(l.namaAset)}<br><small style="color:#888;font-weight:400">${esc(l.kodeAset)}${l.unitLabels && l.unitLabels.length ? ' · <strong>'+l.unitLabels.map(esc).join(', ')+'</strong>' : ''}</small></td>
+        <td><strong>${l.jumlah}</strong> <small style="color:#888">${esc(l.satuan||'')}</small></td>
+        <td>${esc(l.peminjam)}</td>
+        <td style="color:#666;font-size:.82rem">${esc(l.kontak)||'—'}</td>
+        <td>${formatTgl(l.tglPinjam)}</td>
+        <td>${l.rencanaKembali ? formatTgl(l.rencanaKembali) : '—'}</td>
+        <td>${l.tglKembali ? formatTgl(l.tglKembali) : '—'}</td>
+        <td><span class="badge-status ${statusClass}">${esc(statusLabel)}</span></td>
+        <td>
+          <div class="actions">
+            ${l.status === 'Dipinjam' ? `<button class="btn-kembali" onclick="requirePin(() => openKembaliModal('${l.id}'))">🔄 Kembalikan</button>` : ''}
+            <button class="btn-hapus" onclick="requirePin(() => hapusPinjam('${l.id}'))">🗑️</button>
+          </div>
+        </td>
+      </tr>
+    `;
+    }).join('');
+  }
+}
+
+function formatTgl(str) {
+  if (!str) return '—';
+  const [y,m,d] = str.split('-');
+  if (!y||!m||!d) return str;
+  return `${d}/${m}/${y}`;
+}
+
+function esc(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ─── EKSPOR EXCEL (.xls) ───
+function exportXLS(rows, filename, sheetName) {
+  if (!rows.length) { showToast('⚠️ Tidak ada data untuk diekspor!', true); return; }
+  if (typeof XLSX === 'undefined') { showToast('⚠️ Library Excel belum termuat. Cek koneksi internet.', true); return; }
+
+  const ws = XLSX.utils.json_to_sheet(rows);
+
+  // auto column width: ambil lebar max tiap kolom
+  const cols = Object.keys(rows[0]);
+  const colWidths = cols.map(key => {
+    const maxData = rows.reduce((mx, r) => Math.max(mx, String(r[key]||'').length), 0);
+    return { wch: Math.max(key.length, maxData) + 2 };
+  });
+  ws['!cols'] = colWidths;
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, sheetName);
+  // gunakan xlsx (lebih kompatibel dengan Excel modern)
+  XLSX.writeFile(wb, filename, { bookType: 'xlsx' });
+}
+
+function exportInventaris() {
+  if (!db.length) { showToast('⚠️ Tidak ada data untuk diekspor!', true); return; }
+  if (typeof XLSX === 'undefined') { showToast('⚠️ Library Excel belum termuat. Cek koneksi internet.', true); return; }
+
+  const rows = db.map(d => ({
+    'Kode': d.kode,
+    'Nama Aset': d.nama,
+    'Kategori': d.kategori,
+    'Jumlah': d.jumlah,
+    'Satuan': d.satuan || '',
+    'Tersedia': computeTersedia(d),
+    'Kondisi': d.kondisi,
+    'Nilai Satuan (Rp)': d.nilai || 0,
+    'Total Nilai (Rp)': (d.nilai || 0) * (d.jumlah || 1),
+    'Lokasi': d.lokasi || '',
+    'Tanggal Perolehan': d.tanggal || '',
+    'Keterangan': d.keterangan || ''
+  }));
+
+  // Sheet kedua: daftar unit/nomor seri per aset, supaya bisa dicek satu-satu (mis. HT mana yang ada di mana)
+  const unitRows = [];
+  db.forEach(d => {
+    (d.units || []).forEach(u => {
+      unitRows.push({
+        'Kode Aset': d.kode,
+        'Nama Aset': d.nama,
+        'Label / No. Seri Unit': u.label,
+        'Status': u.status,
+        'Kondisi': u.kondisi || d.kondisi
+      });
+    });
+  });
+
+  const wb = XLSX.utils.book_new();
+
+  const ws1 = XLSX.utils.json_to_sheet(rows);
+  ws1['!cols'] = Object.keys(rows[0]).map(key => {
+    const maxData = rows.reduce((mx, r) => Math.max(mx, String(r[key]||'').length), 0);
+    return { wch: Math.max(key.length, maxData) + 2 };
+  });
+  XLSX.utils.book_append_sheet(wb, ws1, 'Inventaris');
+
+  if (unitRows.length) {
+    const ws2 = XLSX.utils.json_to_sheet(unitRows);
+    ws2['!cols'] = Object.keys(unitRows[0]).map(key => {
+      const maxData = unitRows.reduce((mx, r) => Math.max(mx, String(r[key]||'').length), 0);
+      return { wch: Math.max(key.length, maxData) + 2 };
+    });
+    XLSX.utils.book_append_sheet(wb, ws2, 'Daftar Unit');
+  }
+
+  XLSX.writeFile(wb, `Inventaris-Karangtaruna-${todayStr().replace(/-/g,'')}.xlsx`, { bookType: 'xlsx' });
+  showToast('⬇️ File Excel inventaris (termasuk daftar unit) berhasil diunduh!');
+}
+
+function exportPeminjaman() {
+  const rows = loans.map(l => ({
+    'Kode Aset': l.kodeAset,
+    'Nama Aset': l.namaAset,
+    'Jumlah Dipinjam': l.jumlah,
+    'Unit yang Dipinjam': (l.unitLabels && l.unitLabels.length) ? l.unitLabels.join(', ') : '',
+    'Satuan': l.satuan || '',
+    'Peminjam': l.peminjam,
+    'Kontak': l.kontak || '',
+    'Tanggal Pinjam': l.tglPinjam || '',
+    'Rencana Kembali': l.rencanaKembali || '',
+    'Tanggal Kembali': l.tglKembali || '',
+    'Status': isTerlambat(l) ? 'Terlambat' : l.status,
+    'Catatan Pinjam': l.catatanPinjam || '',
+    'Catatan Kembali': l.catatanKembali || ''
+  }));
+  exportXLS(rows, `Peminjaman-Karangtaruna-${todayStr().replace(/-/g,'')}.xlsx`, 'Peminjaman');
+  showToast('⬇️ File Excel peminjaman berhasil diunduh!');
+}
+
+// ─── TOAST ───
+let toastTimer;
+function showToast(msg, isError = false) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+// ─── SEED DATA (first load) ───
+function seedData() {
+  if (db.length > 0) return;
+  const seeds = [
+    { id: genId(), kode: 'KT-001', nama: 'Sound System', kategori: 'Elektronik', jumlah: 1, satuan: 'set', kondisi: 'Baik', nilai: 5000000, lokasi: 'Sekretariat', tanggal: '2022-08-17', keterangan: 'Sound system 500W beserta speaker dan mixer', createdAt: Date.now() },
+    { id: genId(), kode: 'KT-002', nama: 'Tenda Pesta 5x10m', kategori: 'Peralatan', jumlah: 2, satuan: 'unit', kondisi: 'Baik', nilai: 3500000, lokasi: 'Gudang', tanggal: '2021-05-01', keterangan: '', createdAt: Date.now() },
+    { id: genId(), kode: 'KT-003', nama: 'Kursi Lipat', kategori: 'Furnitur', jumlah: 50, satuan: 'buah', kondisi: 'Baik', nilai: 75000, lokasi: 'Gudang', tanggal: '2020-01-01', keterangan: '', createdAt: Date.now() },
+    { id: genId(), kode: 'KT-004', nama: 'Proyektor Epson', kategori: 'Elektronik', jumlah: 1, satuan: 'unit', kondisi: 'Perbaikan', nilai: 4200000, lokasi: 'Sekretariat', tanggal: '2019-12-10', keterangan: 'Lampu proyektor perlu diganti', createdAt: Date.now() },
+    { id: genId(), kode: 'KT-005', nama: 'Bola Sepak', kategori: 'Olahraga', jumlah: 5, satuan: 'buah', kondisi: 'Baik', nilai: 250000, lokasi: 'Lapangan', tanggal: '2023-01-15', keterangan: '', createdAt: Date.now() },
+  ];
+  db = seeds;
+  saveDB();
+}
+
+// ─── INIT ───
+loadDB();
+loadLoans();
+loadFromCloud(() => {
+  seedData();
+  ensureUnits();
+  migrateLoanUnits();
+  render();
+  renderLoans();
+});
+
+// close modal on overlay click
+document.getElementById('modalOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+});
+document.getElementById('modalPinjamOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalPinjamOverlay')) closePinjamModal();
+});
+document.getElementById('modalKembaliOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalKembaliOverlay')) closeKembaliModal();
+});
+document.getElementById('modalUnitOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalUnitOverlay')) closeUnitsModal();
+});
+document.getElementById('modalDetailOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('modalDetailOverlay')) closeDetailModal();
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeModal(); closePinjamModal(); closeKembaliModal(); closeUnitsModal(); closeDetailModal(); closeConfirm(); } });
+</script>
+</body>
+</html>
